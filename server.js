@@ -42,12 +42,12 @@ app.post('/api', function(req, res) {
 			/*Inserindo os dados*/
 			collection.insert(data, function(err, records) {
 				if(err) {
-					res.json({
+					res.status(500).json({
 						success: false,
 						error: err
 					});
 				} else {
-					res.json({
+					res.status(200).json({
 						success: true,
 						result: records.ops
 					});
@@ -73,12 +73,12 @@ app.get('/api', function(req, res) {
 			/*Retornando os dados*/
 			collection.find().toArray(function(err, results) {
 				if(err) {
-					res.json({
+					res.status(500).json({
 						success: false,
 						error: err
 					});
 				} else {
-					res.json(results);
+					res.status(200).json(results);
 				}
 
 				/*Fechando conexão*/
@@ -103,7 +103,7 @@ app.get('/api/:ID', function(req, res) {
 			/*req.body => Retorna os parâmetros do body*/
 			collection.find(objectId(req.params.ID)).toArray(function(err, result) {
 				if(err) {
-					res.json({
+					res.status(500).json({
 						success: false,
 						error: err
 					});
@@ -144,7 +144,7 @@ app.put('/api/:ID', function(req, res) {
 				}, 
 				function(err, record) {
 					if(err) {
-						res.json({
+						res.status(500).json({
 							success: false,
 							error: err
 						});
@@ -176,7 +176,7 @@ app.delete('/api/:ID', function(req, res) {
 			/*O ID é passado como string, porém para poder efetuar a consulta no mongoDB precisamos converter o ID para ObkectID*/
 			collection.remove({_id: objectId(req.params.ID)}, function(err, record) {
 				if(err) {
-					res.json({
+					res.status(500).json({
 						success: false,
 						error: err
 					});
