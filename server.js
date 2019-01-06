@@ -1,12 +1,16 @@
 var express = require('express');
 var bodyParser = require('body-parser');
+var multiParty = require('connect-multiparty');
 var mongodb = require('mongodb');
 var objectId = require('mongodb').ObjectId;
+var fs = require('fs'); //FileSystem - Módulo nativo para manipular arquivo
+var fse = require('fs-extra'); //Não é nativo, tem que instalar. Tivemos que utilizar porque o "fs.rename" não conseguiu mover o arquivo de outra unidade de disco
 
 var app = express();
 
 app.use(bodyParser.urlencoded({extended:true}));
 app.use(bodyParser.json());
+app.use(multiParty());
 
 var port = 8080;
 
@@ -29,39 +33,67 @@ var db = new mongodb.Db(
 // API REST
 // (verbo HTTP + URI)
 
-//===> POST
+//==========> POST
 app.post('/api', function(req, res) {
-	var data = req.body;
 
-	/*Abrindo Conexão*/
-	db.open(function(err, mongoClient) {
+	/*Access-Control-Allow-Origin - Quando um aplicação de um domínio "http://localhost:8080/api" 
+	se comunica com um aplicação de outro domínio "http://localhost" é necessario que a aplicação 
+	que responde seja feito uma configuração no header dessa resposta*/
 
-		/*Criando/Usando Collection "Tabela"*/
-		mongoClient.collection('postagem', function(err, collection) {
+	/*Responde para qualquer domínio - CORS Domain*/
+	//res.setHeader("Access-Control-Allow-Origin", "*")
+	res.setHeader("Access-Control-Allow-Origin", "http://localhost")
 
-			/*Inserindo os dados*/
-			collection.insert(data, function(err, records) {
-				if(err) {
-					res.status(500).json({
-						success: false,
-						error: err
-					});
-				} else {
-					res.status(200).json({
-						success: true,
-						result: records.ops
-					});
-				}
+	var date = new Date();
+	var time_stamp = date.getTime();
 
-				/*Fechando conexão*/
-				mongoClient.close();
+	var url_image = time_stamp + '_' + req.files.arquivo.originalFilename;
+ 
+	/*res.files - Contém os dados do arquivo de upload*/
+	var path_origem = req.files.arquivo.path;
+	var path_destino = './uploads/' + url_image;
 
+	fse.move(path_origem, path_destino, function(err) {
+		if (err) {
+			res.status(500).json({success: false, error: err});
+			return;
+		}
+
+		var data = {
+			titulo: req.body,
+			url_image: url_image
+		}
+		
+		/*Abrindo Conexão*/
+		db.open(function(err, mongoClient) {
+
+			/*Criando/Usando Collection "Tabela"*/
+			mongoClient.collection('postagem', function(err, collection) {
+
+				/*Inserindo os dados*/
+				collection.insert(data, function(err, records) {
+					if(err) {
+						res.status(500).json({
+							success: false,
+							error: err
+						});
+					} else {
+						res.status(200).json({
+							success: true,
+							result: records.ops
+						});
+					}
+
+					/*Fechando conexão*/
+					mongoClient.close();
+				});
 			});
 		});
 	});
 });
 
-//===> GET - All, Retorna todos os dados
+
+//==========> GET - All, Retorna todos os dados
 app.get('/api', function(req, res) {
 
 	/*Abrindo Conexao*/
@@ -83,13 +115,13 @@ app.get('/api', function(req, res) {
 
 				/*Fechando conexão*/
 				mongoClient.close();
-
 			});
 		});
 	});
 });
 
-//===> GET - ID, Retorna um documento específico
+
+//==========> GET - ID, Retorna um documento específico
 app.get('/api/:ID', function(req, res) {
 	/*Abrindo Conexao*/
 	db.open(function(err, mongoClient) {
@@ -113,13 +145,13 @@ app.get('/api/:ID', function(req, res) {
 
 				/*Fechando conexão*/
 				mongoClient.close();
-
 			});
 		});
 	});
 });
 
-//===> PUT - ID, Atualiza um documento específico
+
+//==========> PUT - ID, Atualiza um documento específico
 app.put('/api/:ID', function(req, res) {
 
 	/*Abrindo Conexao*/
@@ -163,7 +195,8 @@ app.put('/api/:ID', function(req, res) {
 	});
 });
 
-//===> DELETE - ID, Remove um documento específico
+
+//==========> DELETE - ID, Remove um documento específico
 app.delete('/api/:ID', function(req, res) {
 
 	/*Abrindo Conexao*/
